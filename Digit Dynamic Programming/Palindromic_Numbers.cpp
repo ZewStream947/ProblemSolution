@@ -47,8 +47,6 @@ LL solve(int l, int r, bool tightL, bool tightR, bool isLeadingbyZero)
 
 LL solve(LL number)
 {
-    if (number < 0)
-        return 0;
     if (number < 10)
         return number + 1;
 

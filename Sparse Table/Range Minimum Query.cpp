@@ -1,6 +1,6 @@
 #include <iostream>
 
-#define MAX_LOG 25
+#define MAX_LOG 18
 #define MAX_SIZE 100001
 
 using namespace std;

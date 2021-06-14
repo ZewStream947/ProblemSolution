@@ -8,6 +8,15 @@ class union_set
 private:
     vector<int> superios, p;
 
+    int update(int x)
+    {
+        if (x == p[x])
+            return x;
+        int root = update(p[x]);
+        superios[x] += superios[p[x]];
+        return p[x] = root;
+    }
+
 public:
     union_set(int n)
     {
@@ -25,11 +34,7 @@ public:
 
     int get_sups(int n)
     {
-        while (p[n] != p[p[n]])
-        {
-            superios[n] += superios[p[n]];
-            p[n] = p[p[n]];
-        }
+        update(n);
         return superios[n];
     }
 };

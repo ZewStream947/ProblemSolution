@@ -46,7 +46,7 @@ int main()
     {
         if (total >= m)
         {
-            printf("%d ", 0);
+            printf("0 ");
             continue;
         }
         prev = total;

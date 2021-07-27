@@ -1,113 +1,132 @@
-#include <iostream>
-#include <algorithm>
+#include <cstdio>
 #include <cstring>
 
-using namespace std;
-
-int *suffix;
-int len = 0;
-
-void count_sort(int source[], int arr[], int len)
+struct pr
 {
-    int index, output[len], cnt[len] = {0};
-    for (index = 0; index < len; ++index)
-        ++cnt[arr[index]];
-    for (index = 1; index < len; ++index)
+    int a, b;
+};
+
+const int MAXLEN = 3e5 + 2;
+
+//SA vars
+int len, suf[MAXLEN];
+char str[MAXLEN];
+
+//Substr vars
+char sub[MAXLEN];
+int sublen;
+
+//Temp vars
+int cnt[MAXLEN], tmp[MAXLEN], index;
+
+void sort_suf(int cmp[], int lim)
+{
+    for (index = 0; index < lim; cnt[index++] = 0)
+        ;
+    for (index = 0; index < len; ++cnt[cmp[index++]])
+        ;
+    for (index = 1; index < lim; ++index)
         cnt[index] += cnt[index - 1];
     for (index = len - 1; index >= 0; --index)
-        output[--cnt[arr[source[index]]]] = source[index];
-    copy(output, output + len, source);
+        tmp[--cnt[cmp[suf[index]]]] = suf[index];
+    for (index = 0; index < len; ++index)
+        suf[index] = tmp[index];
 }
 
-void buildSA(char str[])
+void construct()
 {
-    suffix = (int *)malloc(len * sizeof(int));
-    int cls[len], cls_temp[len], index;
-    { //Init
-        pair<char, int> arr[len];
-        for (index = 0; index < len; ++index)
-            arr[index] = {str[index], index};
-        sort(arr, arr + len);
-        for (index = 0; index < len; ++index)
-            suffix[index] = arr[index].second;
-        cls[suffix[0]] = 0;
-        for (index = 1; index < len; ++index)
-            cls[suffix[index]] = cls[suffix[index - 1]] + (arr[index - 1].first != arr[index].first);
-    }
+    len = strlen(str);
+    str[len++] = '$';
 
-    for (int gap = 1; gap < len; gap *= 2)
-    {
+    int cls[len], classes;
+    { //Len 1
         for (index = 0; index < len; ++index)
-            suffix[index] = (suffix[index] - gap + len) % len;
-        count_sort(suffix, cls, len);
-        cls_temp[suffix[0]] = 0;
+        {
+            suf[index] = index;
+            cls[index] = str[index];
+        }
+        sort_suf(cls, 256);
+        cls[suf[0]] = 0;
+        classes = 1;
         for (index = 1; index < len; ++index)
         {
-            pair<int, int> prev = {cls[suffix[index - 1]], cls[(suffix[index - 1] + gap) % len]};
-            pair<int, int> curr = {cls[suffix[index]], cls[(suffix[index] + gap) % len]};
-            cls_temp[suffix[index]] = cls_temp[suffix[index - 1]] + (prev != curr);
+            if (str[suf[index]] != str[suf[index - 1]])
+                ++classes;
+            cls[suf[index]] = classes - 1;
         }
-        copy(cls_temp, cls_temp + len, cls);
+    }
+
+    pr prev, curr;
+
+    for (int l = 1; l < len; l <<= 1)
+    {
+        for (index = 0; index < len; ++index)
+        {
+            suf[index] -= l;
+            if (suf[index] < 0)
+                suf[index] += len;
+        }
+        sort_suf(cls, classes);
+        tmp[suf[0]] = 0;
+        classes = 1;
+        for (index = 1; index < len; ++index)
+        {
+            prev = {cls[suf[index - 1]], cls[(suf[index - 1] + l) % len]};
+            curr = {cls[suf[index]], cls[(suf[index] + l) % len]};
+            if (prev.a != curr.a || prev.b != curr.b)
+                ++classes;
+            tmp[suf[index]] = classes - 1;
+        }
+        for (index = 0; index < len; ++index)
+            cls[index] = tmp[index];
     }
 }
 
-int upper_bound(char source[], char target[])
+bool good2(int idx1)
 {
-    int l = 1, r = len, mid;
-    int sub_len = strlen(target);
-    while (l < r)
-    {
-        mid = (l + r) >> 1;
-        char tmp[sub_len];
-        memcpy(tmp, &source[suffix[mid]], sub_len);
-        tmp[sub_len] = '\0';
-        if (strcmp(target, tmp) >= 0)
-            l = mid + 1;
-        else
-            r = mid;
-    }
-    return l;
+    int idx2 = 0;
+    while (idx1 < len && idx2 < sublen && str[idx1] == sub[idx2])
+        ++idx1, ++idx2;
+    return (idx2 == sublen || str[idx1] > sub[idx2]);
 }
 
-int lower_bound(char source[], char target[])
+bool good1(int idx1)
 {
-    int l = 1, r = len, mid;
-    int sub_len = strlen(target);
-    while (l < r)
+    int idx2 = 0;
+    while (idx1 < len && idx2 < sublen && str[idx1] == sub[idx2])
+        ++idx1, ++idx2;
+    return (idx2 < sublen && str[idx1] > sub[idx2]);
+}
+
+int find(bool isUpper)
+{
+    int l = 0, r = len, mid;
+    while (l + 1 < r)
     {
         mid = (l + r) >> 1;
-        char tmp[sub_len];
-        memcpy(tmp, &source[suffix[mid]], sub_len);
-        tmp[sub_len] = '\0';
-        if (strcmp(target, tmp) <= 0)
-            r = mid;
+        if (isUpper)
+            good1(suf[mid]) ? r = mid : l = mid;
         else
-            l = mid + 1;
+            good2(suf[mid]) ? r = mid : l = mid;
     }
-    return l;
+    return r;
 }
 
 int main()
 {
-    ios_base::sync_with_stdio(false);
 
-    char str[300001];
-    scanf("%s", str);
+    scanf("%s", &str);
 
-    len = strlen(str);
-    str[len++] = '$';
-    str[len] = '\0';
+    construct();
 
-    buildSA(str);
+    int n;
+    scanf("%d", &n);
+
+    while (n--)
     {
-        int t;
-        scanf("%d", &t);
-        char s[300001];
-        while (t--)
-        {
-            scanf("%s", s);
-            cout << upper_bound(str, s) - lower_bound(str, s) << endl;
-        }
+        scanf("%s", &sub);
+        sublen = strlen(sub);
+        printf("%d\n", find(1) - find(0));
     }
 
     return 0;
